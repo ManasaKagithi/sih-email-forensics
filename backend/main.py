@@ -1,6 +1,8 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from email_parser import analyze_email, get_geo_location
+from pydantic import BaseModel
 from email_parser import analyze_email
 import logging
 import io
@@ -163,3 +165,16 @@ def generate_forensic_report(analysis_data: dict):
         )
     except Exception as e:
         return {"status": "error", "message": str(e)}
+    class IPRequest(BaseModel):
+    ip: str
+
+@app.post("/api/lookup-ip")
+def lookup_ip(request: IPRequest):
+    """Standalone IP Geolocation and Intelligence Lookup."""
+    ip_address = request.ip.strip()
+    if not ip_address:
+        raise HTTPException(status_code=400, detail="IP address is required")
+    
+    # Reuse the existing geo-location function
+    result = get_geo_location(ip_address)
+    return result
