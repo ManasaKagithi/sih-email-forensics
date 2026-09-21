@@ -5,9 +5,8 @@ from email import policy
 from typing import Dict, List, Optional, Set
 import requests
 
-# Hugging Face Free Inference API URL for Zero-Shot Classification
 HF_API_URL = "https://api-inference.huggingface.co/models/typeform/distilbert-base-uncased-mnli"
-HF_HEADERS = {"Content-Type": "application/json"} # Add "Authorization": "Bearer YOUR_TOKEN" later if you hit rate limits
+HF_HEADERS = {"Content-Type": "application/json"}
 
 def is_private_ip(ip_str: str) -> bool:
     try:
@@ -51,10 +50,6 @@ def get_geo_location(ip_address: str) -> Dict:
         return {"status": "Error", "message": str(e)}
 
 def analyze_with_huggingface_cloud(subject: str, body: str) -> Dict:
-    """
-    Sends text to Hugging Face's free cloud API for real BERT Zero-Shot Classification.
-    Uses almost 0MB of RAM on Render!
-    """
     text_to_analyze = f"{subject} {body[:500]}"
     payload = {
         "inputs": text_to_analyze,
@@ -64,9 +59,7 @@ def analyze_with_huggingface_cloud(subject: str, body: str) -> Dict:
     }
     
     try:
-        # Timeout set to 15s to prevent Render from hanging if HF is cold-starting
         response = requests.post(HF_API_URL, headers=HF_HEADERS, json=payload, timeout=15)
-        
         if response.status_code == 200:
             result = response.json()
             labels = result.get('labels', [])
@@ -82,9 +75,8 @@ def analyze_with_huggingface_cloud(subject: str, body: str) -> Dict:
                 "all_scores": {label: f"{round(score * 100, 2)}%" for label, score in zip(labels, scores)}
             }
         else:
-            # Fallback if HF API is rate-limited or cold
             return {
-                "ai_model": "Hugging Face API (Rate Limited/Cold)",
+                "ai_model": "Hugging Face API (Cold/Rate Limited)",
                 "predicted_category": "legitimate email",
                 "confidence_score": "50.0%",
                 "all_scores": {"legitimate email": "50.0%", "phishing attempt": "25.0%", "business email compromise": "25.0%"}
@@ -120,19 +112,28 @@ def analyze_email(raw_email_text: str) -> Dict:
         ip_data = extract_all_ips_from_headers(msg.get_all('received', []))
         geo_location = get_geo_location(ip_data["originating_ip"]) if ip_data["originating_ip"] else {"status": "No IP"}
         
-        # Call the Cloud AI
         ai_analysis = analyze_with_huggingface_cloud(subject, body)
         
-        # Calculate Fraud Score
+        # --- NEW DYNAMIC SCORING ALGORITHM ---
         fraud_score = 0
-        if spf == 'Fail': fraud_score += 25
-        if dkim == 'Fail': fraud_score += 15
         
-        if "phishing attempt" in ai_analysis.get("predicted_category", ""): fraud_score += 40
-        if "business email compromise" in ai_analysis.get("predicted_category", ""): fraud_score += 50
+        # 1. Authentication Failures (Max 40 points)
+        if spf == 'Fail': fraud_score += 20
+        if dkim == 'Fail': fraud_score += 20
         
-        if geo_location.get("connection_type", {}).get("is_proxy"): fraud_score += 10
-        if geo_location.get("connection_type", {}).get("is_hosting"): fraud_score += 10
+        # 2. AI Confidence Weighting (Max 50 points)
+        # We extract the actual percentage numbers and weight them!
+        ai_scores = ai_analysis.get("all_scores", {})
+        phishing_pct = float(ai_scores.get("phishing attempt", "0%").replace("%", ""))
+        bec_pct = float(ai_scores.get("business email compromise", "0%").replace("%", ""))
+        
+        # Weight phishing slightly higher, but combine both threats
+        ai_threat_value = (phishing_pct * 0.6) + (bec_pct * 0.4)
+        fraud_score += int(ai_threat_value / 2)  # Scales max 100% down to 50 points
+        
+        # 3. Infrastructure Risk (Max 10 points)
+        if geo_location.get("connection_type", {}).get("is_proxy"): fraud_score += 5
+        if geo_location.get("connection_type", {}).get("is_hosting"): fraud_score += 5
         
         fraud_score = min(fraud_score, 100)
         risk_level = "HIGH" if fraud_score >= 60 else ("MEDIUM" if fraud_score >= 30 else "LOW")
