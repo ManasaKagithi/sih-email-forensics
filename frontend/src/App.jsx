@@ -94,7 +94,7 @@ function App() {
     try {
       const response = await axios.post('http://127.0.0.1:8000/api/analyze-file', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       setAnalysisResult(response.data);
-    } catch (error) {
+    } catch {
       alert("Failed to analyze file. Make sure the backend is running!");
     } finally { setLoading(false); }
   }, []);
@@ -108,7 +108,7 @@ function App() {
     try {
       const response = await axios.post('http://127.0.0.1:8000/api/lookup-ip', { ip: ipInput });
       setIpResult(response.data);
-    } catch (error) {
+    } catch {
       alert("Failed to lookup IP. Make sure the backend is running!");
     } finally { setIpLoading(false); }
   };
@@ -186,7 +186,7 @@ function App() {
                     const response = await axios.post('http://127.0.0.1:8000/api/generate-report', analysisResult, { responseType: 'blob' });
                     const url = window.URL.createObjectURL(new Blob([response.data]));
                     const link = document.createElement('a'); link.href = url; link.setAttribute('download', `Forensic_Report.pdf`); document.body.appendChild(link); link.click(); link.parentNode.removeChild(link);
-                  } catch (error) { alert("Failed to generate PDF report."); }
+                  } catch { alert("Failed to generate PDF report."); }
                 }} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg flex items-center gap-2 transition-all">
                   📄 Download Official Forensic PDF Report
                 </button>
