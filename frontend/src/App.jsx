@@ -46,16 +46,16 @@ const LocationMap = ({ data, originatingIp }) => {
           <p className="text-blue-400 font-mono text-xl font-bold">{originatingIp || data.ip}</p>
         </div>
         <div className="bg-slate-900 p-3 rounded-lg border border-slate-700">
-          <p className="text-slate-500 text-xs"> PHYSICAL LOCATION</p>
+          <p className="text-slate-500 text-xs">📍 PHYSICAL LOCATION</p>
           <p className="text-white text-lg font-bold">{data.city}, {data.country}</p>
           <p className="text-slate-400 text-xs font-mono mt-1">Lat: {data.coordinates.latitude} | Lon: {data.coordinates.longitude}</p>
         </div>
         <div className="bg-slate-900 p-3 rounded-lg border border-slate-700">
-          <p className="text-slate-500 text-xs"> ISP / ORGANIZATION</p>
+          <p className="text-slate-500 text-xs">🏢 ISP / ORGANIZATION</p>
           <p className="text-white text-sm">{data.isp} {data.organization ? `(${data.organization})` : ''}</p>
         </div>
         <div className="bg-slate-900 p-3 rounded-lg border border-slate-700">
-          <p className="text-slate-500 text-xs">⚠️ CONNECTION TYPE</p>
+          <p className="text-slate-500 text-xs">️ CONNECTION TYPE</p>
           <div className="flex flex-wrap gap-2 mt-2">
             {data.connection_type?.is_proxy && <span className="bg-red-900/50 text-red-300 text-xs px-2 py-1 rounded border border-red-700 font-bold">PROXY</span>}
             {data.connection_type?.is_hosting && <span className="bg-orange-900/50 text-orange-300 text-xs px-2 py-1 rounded border border-orange-700 font-bold">DATACENTER</span>}
@@ -66,6 +66,24 @@ const LocationMap = ({ data, originatingIp }) => {
           🔗 View on Google Maps
         </a>
       </div>
+    </div>
+  );
+};
+
+// --- IP LIST COMPONENT ---
+const IpList = ({ ips }) => {
+  if (!ips || ips.length === 0) {
+    return <p className="text-slate-500 text-sm italic">None detected</p>;
+  }
+  
+  return (
+    <div className="space-y-2 mt-2">
+      {ips.map((ip, index) => (
+        <div key={index} className="flex items-center justify-between bg-slate-900/50 p-2 rounded border border-slate-700">
+          <span className="font-mono text-sm text-blue-300">{ip}</span>
+          <span className="text-xs text-slate-500">Hop {index + 1}</span>
+        </div>
+      ))}
     </div>
   );
 };
@@ -174,16 +192,33 @@ function App() {
                 </div>
               </div>
               
+              {/* Network Routing Path - NEW SECTION */}
+              <div className="bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-700 lg:col-span-1">
+                <h2 className="text-xl font-bold text-slate-300 mb-4">🌐 Network Routing Path</h2>
+                
+                <div className="mb-4">
+                  <h3 className="text-sm font-bold text-blue-400 uppercase tracking-wide">External (Public IPs)</h3>
+                  <p className="text-xs text-slate-500 mb-1">Internet-facing servers</p>
+                  <IpList ips={analysisResult.forensics.public_ips} />
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-bold text-purple-400 uppercase tracking-wide">Internal (Private IPs)</h3>
+                  <p className="text-xs text-slate-500 mb-1">Local network hops (192.168.x.x, 10.x.x.x)</p>
+                  <IpList ips={analysisResult.forensics.private_ips} />
+                </div>
+              </div>
+              
               {/* Location Map for Email */}
-              <div className="bg-slate-800 p-6 rounded-xl shadow-lg border-2 border-red-900/50 lg:col-span-3">
-                <h2 className="text-xl font-bold text-red-400 mb-4"> TARGET LOCATION INTELLIGENCE</h2>
+              <div className="bg-slate-800 p-6 rounded-xl shadow-lg border-2 border-red-900/50 lg:col-span-2">
+                <h2 className="text-xl font-bold text-red-400 mb-4">📍 TARGET LOCATION INTELLIGENCE</h2>
                 <LocationMap data={analysisResult.forensics.geo_location} originatingIp={analysisResult.forensics.originating_ip} />
               </div>
 
               <div className="lg:col-span-3 flex justify-center mt-4 mb-8">
                 <button onClick={async () => {
                   try {
-                    const response = await axios.post('http://127.0.0.1:8000/api/generate-report', analysisResult, { responseType: 'blob' });
+                    const response = await axios.post('https://sih-email-forensics-1zcv.onrender.com/api/generate-report', analysisResult, { responseType: 'blob' });
                     const url = window.URL.createObjectURL(new Blob([response.data]));
                     const link = document.createElement('a'); link.href = url; link.setAttribute('download', `Forensic_Report.pdf`); document.body.appendChild(link); link.click(); link.parentNode.removeChild(link);
                   } catch { alert("Failed to generate PDF report."); }
