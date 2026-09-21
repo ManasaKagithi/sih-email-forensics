@@ -141,6 +141,7 @@ def analyze_email(raw_email_text: str) -> Dict:
         return {
             "status": "success",
             "metadata": {"subject": subject, "from": from_addr, "to": to_addr},
+            "body_content": body[:300] + "..." if len(body) > 300 else body, # <-- ADD THIS LINE
             "authentication": {"spf": spf, "dkim": dkim},
             "forensics": {
                 "originating_ip": ip_data["originating_ip"],
