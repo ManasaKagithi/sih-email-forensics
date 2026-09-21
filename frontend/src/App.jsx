@@ -92,7 +92,7 @@ function App() {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const response = await axios.post('http://127.0.0.1:8000/api/analyze-file', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const response = await axios.post('https://sih-email-forensics-1zcv.onrender.com', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       setAnalysisResult(response.data);
     } catch {
       alert("Failed to analyze file. Make sure the backend is running!");
@@ -106,7 +106,7 @@ function App() {
     setIpLoading(true);
     setIpResult(null);
     try {
-      const response = await axios.post('http://127.0.0.1:8000/api/lookup-ip', { ip: ipInput });
+      const response = await axios.post('https://sih-email-forensics-1zcv.onrender.com/lookup-ip', { ip: ipInput });
       setIpResult(response.data);
     } catch {
       alert("Failed to lookup IP. Make sure the backend is running!");
