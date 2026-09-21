@@ -53,14 +53,14 @@ async def analyze_email_file(file: UploadFile = File(...)):
 
 @app.post("/api/generate-report")
 def generate_forensic_report(analysis_data: dict):
-    """Generates a professional PDF forensic report."""
+    """Generates a professional PDF forensic report with prominent location data."""
     try:
         pdf = FPDF()
         pdf.add_page()
         
         # Header
         pdf.set_font("helvetica", "B", 16)
-        pdf.set_text_color(41, 128, 185)
+        pdf.set_text_color(41, 128, 185) # Blue
         pdf.cell(0, 10, "SIH26106: Email Forensic Intelligence Report", align="C", new_x="LMARGIN", new_y="NEXT")
         
         pdf.set_font("helvetica", "", 10)
@@ -87,32 +87,58 @@ def generate_forensic_report(analysis_data: dict):
         pdf.cell(0, 6, f"From: {meta.get('from', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
         pdf.cell(0, 6, f"To: {meta.get('to', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(5)
-        
-        # 3. AI Analysis
+
+        # 3. LOCATION INTELLIGENCE (NEW & PROMINENT)
         pdf.set_font("helvetica", "B", 12)
-        pdf.cell(0, 10, "3. AI BERT Analysis", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_text_color(200, 50, 50) # Red for emphasis
+        pdf.cell(0, 10, "3. TARGET LOCATION INTELLIGENCE", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font("helvetica", "", 10)
+        
+        forensics = analysis_data.get("forensics", {})
+        geo = forensics.get("geo_location", {})
+        origin_ip = forensics.get("originating_ip", "Unknown")
+        
+        pdf.set_font("helvetica", "B", 11)
+        pdf.cell(0, 8, f"Originating IP Address: {origin_ip}", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("helvetica", "", 10)
+        
+        if geo.get("status") != "No IP found" and geo.get("city"):
+            pdf.cell(0, 8, f"Physical Location: {geo.get('city')}, {geo.get('region')}, {geo.get('country')}", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 8, f"Coordinates: Lat {geo.get('coordinates', {}).get('latitude')}, Lon {geo.get('coordinates', {}).get('longitude')}", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 8, f"ISP / Organization: {geo.get('isp')} / {geo.get('organization')}", new_x="LMARGIN", new_y="NEXT")
+            
+            # Connection Type Warning
+            conn = geo.get("connection_type", {})
+            if conn.get("is_proxy") or conn.get("is_hosting"):
+                pdf.set_text_color(200, 50, 50)
+                pdf.set_font("helvetica", "B", 10)
+                pdf.cell(0, 8, "WARNING: Traffic routed through Proxy or Datacenter/Hosting!", new_x="LMARGIN", new_y="NEXT")
+                pdf.set_text_color(0, 0, 0)
+                pdf.set_font("helvetica", "", 10)
+            else:
+                pdf.cell(0, 8, "Connection Type: Residential / Broadband", new_x="LMARGIN", new_y="NEXT")
+                
+            # Add a clickable Google Maps link
+            lat = geo.get('coordinates', {}).get('latitude')
+            lon = geo.get('coordinates', {}).get('longitude')
+            if lat and lon:
+                pdf.set_text_color(0, 0, 255) # Blue for link
+                pdf.cell(0, 8, f"View on Map: https://www.google.com/maps?q={lat},{lon}", new_x="LMARGIN", new_y="NEXT")
+                pdf.set_text_color(0, 0, 0) # Reset color
+        else:
+            pdf.cell(0, 8, "Location data could not be resolved for this IP.", new_x="LMARGIN", new_y="NEXT")
+            
+        pdf.ln(5)
+        
+        # 4. AI Analysis
+        pdf.set_font("helvetica", "B", 12)
+        pdf.set_text_color(0, 0, 0)
+        pdf.cell(0, 10, "4. AI BERT Analysis", new_x="LMARGIN", new_y="NEXT")
         pdf.set_font("helvetica", "", 10)
         ai = analysis_data.get("ai_analysis", {})
         pdf.cell(0, 6, f"Predicted Category: {ai.get('predicted_category', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
-        pdf.cell(0, 6, f"Confidence: {ai.get('confidence_score', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
-        pdf.ln(5)
-        
-        # 4. Geolocation & Network
-        pdf.set_font("helvetica", "B", 12)
-        pdf.cell(0, 10, "4. Origin Traceability & Geolocation", new_x="LMARGIN", new_y="NEXT")
-        pdf.set_font("helvetica", "", 10)
-        forensics = analysis_data.get("forensics", {})
-        pdf.cell(0, 6, f"Originating Public IP: {forensics.get('originating_ip', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
-        geo = forensics.get("geo_location", {})
-        pdf.cell(0, 6, f"Location: {geo.get('city', 'N/A')}, {geo.get('country', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
-        pdf.cell(0, 6, f"ISP/Organization: {geo.get('isp', 'N/A')} / {geo.get('organization', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
-        
-        conn = geo.get("connection_type", {})
-        conn_str = []
-        if conn.get("is_proxy"): conn_str.append("Proxy")
-        if conn.get("is_hosting"): conn_str.append("Hosting/Datacenter")
-        if not conn_str: conn_str.append("Residential/Broadband")
-        pdf.cell(0, 6, f"Connection Type: {', '.join(conn_str)}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 6, f"Confidence Score: {ai.get('confidence_score', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(5)
         
         # 5. Authentication
@@ -126,14 +152,14 @@ def generate_forensic_report(analysis_data: dict):
         pdf.set_y(-20)
         pdf.set_font("helvetica", "I", 8)
         pdf.set_text_color(150, 150, 150)
-        pdf.cell(0, 10, "This report is generated for institutional action and cyber incident response. SIH26106.", align="C")
+        pdf.cell(0, 10, "Generated by SIH26106 Email Forensic Intelligence Platform. For institutional action and law enforcement.", align="C")
 
         # Return as downloadable file
         pdf_bytes = pdf.output(dest='S').encode('latin1')
         return StreamingResponse(
             io.BytesIO(pdf_bytes),
             media_type="application/pdf",
-            headers={"Content-Disposition": "attachment; filename=forensic_report.pdf"}
+            headers={"Content-Disposition": "attachment; filename=Forensic_Report_Location_Traced.pdf"}
         )
     except Exception as e:
         return {"status": "error", "message": str(e)}

@@ -48,13 +48,13 @@ function App() {
     onDrop, accept: { 'message/rfc822': ['.eml'], 'text/plain': ['.txt'] }, multiple: false 
   });
 
-  const renderIpList = (ips) => {
+  const renderIpList = (ips, type) => {
     if (!ips || ips.length === 0) return <p className="text-slate-500 text-sm">None detected</p>;
     return (
       <div className="space-y-2 mt-2">
         {ips.map((ip, index) => (
           <div key={index} className="flex items-center justify-between bg-slate-900/50 p-2 rounded border border-slate-700">
-            <span className="font-mono text-blue-300">{ip}</span>
+            <span className="font-mono text-blue-300 text-sm">{ip}</span>
             <span className="text-xs text-slate-500">Hop {index + 1}</span>
           </div>
         ))}
@@ -131,31 +131,31 @@ function App() {
             </div>
           </div>
 
-          {/* Network Routing Path (Private & Public IPs) */}
+          {/* Network Routing Path */}
           <div className="bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-700 lg:col-span-1">
-            <h2 className="text-xl font-bold text-slate-300 mb-4"> Network Routing Path</h2>
-            
+            <h2 className="text-xl font-bold text-slate-300 mb-4">🌐 Network Routing Path</h2>
             <div className="mb-4">
               <h3 className="text-sm font-bold text-blue-400 uppercase tracking-wide">External (Public IPs)</h3>
               <p className="text-xs text-slate-500 mb-1">Internet-facing servers</p>
               {renderIpList(analysisResult.forensics.public_ips)}
             </div>
-
             <div>
               <h3 className="text-sm font-bold text-purple-400 uppercase tracking-wide">Internal (Private IPs)</h3>
-              <p className="text-xs text-slate-500 mb-1">Local network hops (192.168.x.x, 10.x.x.x)</p>
+              <p className="text-xs text-slate-500 mb-1">Local network hops</p>
               {renderIpList(analysisResult.forensics.private_ips)}
             </div>
           </div>
 
-          {/* Interactive Map - Spans 2 columns */}
-          <div className="bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-700 lg:col-span-2">
-            <h2 className="text-xl font-bold text-slate-300 mb-4">📍 Precise Origin Location</h2>
+          {/* 📍 TARGET LOCATION INTELLIGENCE (FULL WIDTH & PROMINENT) */}
+          <div className="bg-slate-800 p-6 rounded-xl shadow-lg border-2 border-red-900/50 lg:col-span-2">
+            <h2 className="text-xl font-bold text-red-400 mb-4 flex items-center gap-2">
+              📍 TARGET LOCATION INTELLIGENCE
+            </h2>
             {analysisResult.forensics.geo_location.coordinates?.latitude ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
                 
                 {/* The Map */}
-                <div className="md:col-span-2 h-80 rounded-lg overflow-hidden border-2 border-slate-600 z-0">
+                <div className="md:col-span-2 h-80 rounded-lg overflow-hidden border-2 border-slate-600 z-0 relative">
                   <MapContainer 
                     key={`${analysisResult.forensics.geo_location.coordinates.latitude}-${analysisResult.forensics.geo_location.coordinates.longitude}`}
                     center={[analysisResult.forensics.geo_location.coordinates.latitude, analysisResult.forensics.geo_location.coordinates.longitude]} 
@@ -168,8 +168,8 @@ function App() {
                     />
                     <Marker position={[analysisResult.forensics.geo_location.coordinates.latitude, analysisResult.forensics.geo_location.coordinates.longitude]}>
                       <Popup>
-                        <div className="text-slate-900 text-sm">
-                          <strong>Origin: {analysisResult.forensics.geo_location.city}, {analysisResult.forensics.geo_location.country}</strong><br/>
+                        <div className="text-slate-900 text-sm font-bold">
+                          Origin: {analysisResult.forensics.geo_location.city}, {analysisResult.forensics.geo_location.country}<br/>
                           IP: {analysisResult.forensics.originating_ip}<br/>
                           ISP: {analysisResult.forensics.geo_location.isp}
                         </div>
@@ -181,37 +181,87 @@ function App() {
                 {/* Location Details */}
                 <div className="space-y-3">
                   <div className="bg-slate-900 p-3 rounded-lg border border-slate-700">
-                    <p className="text-slate-500 text-xs"> IP ADDRESS</p>
-                    <p className="text-blue-400 font-mono text-lg">{analysisResult.forensics.originating_ip}</p>
+                    <p className="text-slate-500 text-xs">🌐 ORIGINATING IP</p>
+                    <p className="text-blue-400 font-mono text-xl font-bold">{analysisResult.forensics.originating_ip}</p>
                   </div>
+                  
                   <div className="bg-slate-900 p-3 rounded-lg border border-slate-700">
-                    <p className="text-slate-500 text-xs">📍 CITY / COUNTRY</p>
-                    <p className="text-white">{analysisResult.forensics.geo_location.city}, {analysisResult.forensics.geo_location.country}</p>
+                    <p className="text-slate-500 text-xs">📍 PHYSICAL LOCATION</p>
+                    <p className="text-white text-lg font-bold">{analysisResult.forensics.geo_location.city}, {analysisResult.forensics.geo_location.country}</p>
+                    <p className="text-slate-400 text-xs font-mono mt-1">
+                      Lat: {analysisResult.forensics.geo_location.coordinates.latitude}<br/>
+                      Lon: {analysisResult.forensics.geo_location.coordinates.longitude}
+                    </p>
                   </div>
+
                   <div className="bg-slate-900 p-3 rounded-lg border border-slate-700">
-                    <p className="text-slate-500 text-xs">🏢 ISP / ORG</p>
+                    <p className="text-slate-500 text-xs">🏢 ISP / ORGANIZATION</p>
                     <p className="text-white text-sm">{analysisResult.forensics.geo_location.isp}</p>
                   </div>
+
                   <div className="bg-slate-900 p-3 rounded-lg border border-slate-700">
                     <p className="text-slate-500 text-xs">⚠️ CONNECTION TYPE</p>
-                    <div className="text-sm mt-1">
-                      {analysisResult.forensics.geo_location.connection_type?.is_proxy && <p className="text-red-400">Proxy Detected</p>}
-                      {analysisResult.forensics.geo_location.connection_type?.is_hosting && <p className="text-yellow-400">Datacenter/Hosting</p>}
-                      {!analysisResult.forensics.geo_location.connection_type?.is_proxy && !analysisResult.forensics.geo_location.connection_type?.is_hosting && <p className="text-green-400">Residential/Broadband</p>}
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {analysisResult.forensics.geo_location.connection_type?.is_proxy && (
+                        <span className="bg-red-900/50 text-red-300 text-xs px-2 py-1 rounded border border-red-700 font-bold">PROXY DETECTED</span>
+                      )}
+                      {analysisResult.forensics.geo_location.connection_type?.is_hosting && (
+                        <span className="bg-orange-900/50 text-orange-300 text-xs px-2 py-1 rounded border border-orange-700 font-bold">DATACENTER/HOSTING</span>
+                      )}
+                      {!analysisResult.forensics.geo_location.connection_type?.is_proxy && !analysisResult.forensics.geo_location.connection_type?.is_hosting && (
+                        <span className="bg-green-900/50 text-green-300 text-xs px-2 py-1 rounded border border-green-700 font-bold">RESIDENTIAL/BROADBAND</span>
+                      )}
                     </div>
                   </div>
+
+                  {/* Google Maps Link */}
+                  <a 
+                    href={`https://www.google.com/maps?q=${analysisResult.forensics.geo_location.coordinates.latitude},${analysisResult.forensics.geo_location.coordinates.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2 px-4 rounded-lg transition-colors"
+                  >
+                    🔗 View Exact Location on Google Maps
+                  </a>
                 </div>
               </div>
             ) : (
-              <p className="text-slate-500 bg-slate-900 p-4 rounded-lg">No geolocation data available.</p>
+              <p className="text-slate-500 bg-slate-900 p-4 rounded-lg">No geolocation data available for this IP.</p>
             )}
           </div>
 
+          {/* Download Report Button */}
+          <div className="lg:col-span-3 flex justify-center mt-4 mb-8">
+            <button 
+              onClick={async () => {
+                try {
+                  const response = await axios.post('http://127.0.0.1:8000/api/generate-report', analysisResult, {
+                    responseType: 'blob'
+                  });
+                  const url = window.URL.createObjectURL(new Blob([response.data]));
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.setAttribute('download', `Forensic_Report_${analysisResult.forensics.originating_ip || 'Unknown'}.pdf`);
+                  document.body.appendChild(link);
+                  link.click();
+                  link.parentNode.removeChild(link);
+                } catch (error) {
+                  console.error("Error downloading report:", error);
+                  alert("Failed to generate PDF report.");
+                }
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg flex items-center gap-2 transition-all"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Download Official Forensic PDF Report
+            </button>
+          </div>
+
         </div>
-        
       )}
     </div>
-    
   );
 }
 
